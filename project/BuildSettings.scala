@@ -10,21 +10,21 @@ import com.typesafe.sbt.osgi.SbtOsgi
 import SbtOsgi._
 
 object BuildSettings {
-  val VERSION = "1.3.3"
+  val VERSION = "1.3.3-smartnetworks-p1"
 
   lazy val basicSettings = seq(
-    version               := NightlyBuildSupport.buildVersion(VERSION),
-    homepage              := Some(new URL("http://spray.io")),
-    organization          := "io.spray",
-    organizationHomepage  := Some(new URL("http://spray.io")),
-    description           := "A suite of lightweight Scala libraries for building and consuming RESTful " +
-                             "web services on top of Akka",
-    startYear             := Some(2011),
-    licenses              := Seq("Apache 2" -> new URL("http://www.apache.org/licenses/LICENSE-2.0.txt")),
-    scalaVersion          := "2.11.6",
-    crossScalaVersions    := Seq("2.11.6", "2.10.5"),
-    resolvers             ++= Dependencies.resolutionRepos,
-    scalacOptions         := Seq(
+    version := NightlyBuildSupport.buildVersion(VERSION),
+    homepage := Some(new URL("http://spray.io")),
+    organization := "io.spray",
+    organizationHomepage := Some(new URL("http://spray.io")),
+    description := "A suite of lightweight Scala libraries for building and consuming RESTful " +
+      "web services on top of Akka",
+    startYear := Some(2011),
+    licenses := Seq("Apache 2" -> new URL("http://www.apache.org/licenses/LICENSE-2.0.txt")),
+    scalaVersion := "2.11.6",
+    crossScalaVersions := Seq("2.11.6", "2.10.5"),
+    resolvers ++= Dependencies.resolutionRepos,
+    scalacOptions := Seq(
       "-encoding", "utf8",
       "-feature",
       "-unchecked",
@@ -37,41 +37,40 @@ object BuildSettings {
 
   lazy val sprayModuleSettings =
     basicSettings ++ formatSettings ++
-    NightlyBuildSupport.settings ++
-    net.virtualvoid.sbt.graph.Plugin.graphSettings ++
-    SbtPgp.settings ++
-    seq(
-      // scaladoc settings
-      (scalacOptions in doc) <++= (name, version).map { (n, v) => Seq("-doc-title", n, "-doc-version", v) },
+      NightlyBuildSupport.settings ++
+      net.virtualvoid.sbt.graph.Plugin.graphSettings ++
+      SbtPgp.settings ++
+      seq(
+        // scaladoc settings
+        (scalacOptions in doc) <++= (name, version).map { (n, v) => Seq("-doc-title", n, "-doc-version", v) },
 
-      // publishing
-      crossPaths := true,
-      publishMavenStyle := true,
-      SbtPgp.useGpg := true,
-      publishTo <<= version { version =>
-        Some {
-          if (version.contains("-") || true) { // sonatype publishing currently disabled
-            "spray nexus" at {
-              // public uri is repo.spray.io, we use an SSH tunnel to the nexus here
-              "http://localhost:42424/content/repositories/" + {
-                if (version.trim.endsWith("SNAPSHOT")) "snapshots/" else
-                if (NightlyBuildSupport.isNightly) "nightlies/" else "releases/"
+        // publishing
+        crossPaths := true,
+        publishMavenStyle := true,
+        SbtPgp.useGpg := true,
+        publishTo <<= version { version =>
+          Some {
+            if (version.contains("-") || true) { // sonatype publishing currently disabled
+              "spray nexus" at {
+                // public uri is repo.spray.io, we use an SSH tunnel to the nexus here
+                "http://localhost:42424/content/repositories/" + {
+                  if (version.trim.endsWith("SNAPSHOT")) "snapshots/" else if (NightlyBuildSupport.isNightly) "nightlies/" else "releases/"
+                }
               }
-            }
-          } else "sonatype release staging" at "https://oss.sonatype.org/service/local/staging/deploy/maven2"
-        }
-      },
-      pomIncludeRepository := { _ => false },
-      pomExtra :=
-        <scm>
-          <url>git://github.com/spray/spray.git</url>
-          <connection>scm:git:git@github.com:spray/spray.git</connection>
-        </scm>
-        <developers>
-          <developer><id>sirthias</id><name>Mathias Doenitz</name></developer>
-          <developer><id>jrudolph</id><name>Johannes Rudolph</name></developer>
-        </developers>
-    )
+            } else "sonatype release staging" at "https://oss.sonatype.org/service/local/staging/deploy/maven2"
+          }
+        },
+        pomIncludeRepository := { _ => false },
+        pomExtra :=
+          <scm>
+            <url>git://github.com/spray/spray.git</url>
+            <connection>scm:git:git@github.com:spray/spray.git</connection>
+          </scm>
+          <developers>
+            <developer><id>sirthias</id><name>Mathias Doenitz</name></developer>
+            <developer><id>jrudolph</id><name>Johannes Rudolph</name></developer>
+          </developers>
+      )
 
   lazy val noPublishing = seq(
     publish := (),
@@ -81,20 +80,23 @@ object BuildSettings {
     publishTo := None
   )
 
-  lazy val generateSprayVersionConf = TaskKey[Seq[File]]("generate-spray-version-conf",
-    "Create a reference.conf file in the managed resources folder that contains a spray.version = ... setting")
+  lazy val generateSprayVersionConf = TaskKey[Seq[File]](
+    "generate-spray-version-conf",
+    "Create a reference.conf file in the managed resources folder that contains a spray.version = ... setting"
+  )
 
   lazy val sprayVersionConfGeneration = seq(
     (unmanagedResources in Compile) <<= (unmanagedResources in Compile).map(_.filter(_.getName != "reference.conf")),
     resourceGenerators in Compile <+= generateSprayVersionConf,
     generateSprayVersionConf <<= (unmanagedResourceDirectories in Compile, resourceManaged in Compile, version) map {
-      (sourceDir, targetDir, version) => {
-        val source = sourceDir / "reference.conf"
-        val target = targetDir / "reference.conf"
-        val conf = IO.read(source.get.head)
-        IO.write(target, conf.replace("<VERSION>", version))
-        Seq(target)
-      }
+      (sourceDir, targetDir, version) =>
+        {
+          val source = sourceDir / "reference.conf"
+          val target = targetDir / "reference.conf"
+          val conf = IO.read(source.get.head)
+          IO.write(target, conf.replace("<VERSION>", version))
+          Seq(target)
+        }
     }
   )
 
@@ -117,7 +119,7 @@ object BuildSettings {
 
   lazy val formatSettings = SbtScalariform.scalariformSettings ++ Seq(
     ScalariformKeys.preferences in Compile := formattingPreferences,
-    ScalariformKeys.preferences in Test    := formattingPreferences
+    ScalariformKeys.preferences in Test := formattingPreferences
   )
 
   import scalariform.formatter.preferences._
@@ -133,10 +135,10 @@ object BuildSettings {
       OsgiKeys.exportPackage := exports map { pkg => pkg + ".*;version=\"${Bundle-Version}\"" },
       OsgiKeys.importPackage <<= scalaVersion { sv =>
         Seq(CrossVersion.partialVersion(sv) match {
-        case Some((2, scalaMinor)) if scalaMinor >= 11 =>
-          """scala.xml.*;version="$<range;[==,=+);1.0.2>",scala.*;version="$<range;[==,=+);%s>""""
-        case _ =>
-          """scala.*;version="$<range;[==,=+);%s>""""
+          case Some((2, scalaMinor)) if scalaMinor >= 11 =>
+            """scala.xml.*;version="$<range;[==,=+);1.0.2>",scala.*;version="$<range;[==,=+);%s>""""
+          case _ =>
+            """scala.*;version="$<range;[==,=+);%s>""""
         }) map (_.format(sv))
       },
       OsgiKeys.importPackage ++= imports,
