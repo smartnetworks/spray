@@ -220,6 +220,10 @@ class HttpHeaderParserSpec extends Specification {
       parseAndCache("Fancy: foo\tbar\r\nx")() === RawHeader("Fancy", "foo bar")
     }
 
+    "parse and cache a header with a LF as separator char" in new TestSetup() {
+      parseAndCache("Fancy: foo bar\nx")() === RawHeader("Fancy", "foo bar")
+    }
+
     "produce an error message for lines with an illegal header name" in new TestSetup() {
       parseLine(" Connection: close\r\nx") must throwA[ParsingException]("Illegal character ' ' in header name")
       parseLine("Connection : close\r\nx") must throwA[ParsingException]("Illegal character ' ' in header name")
