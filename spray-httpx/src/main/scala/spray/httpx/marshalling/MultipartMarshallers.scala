@@ -48,8 +48,9 @@ trait MultipartMarshallers {
           r ~~ '-' ~~ '-' ~~ boundary ~~ CrLf
           part.headers.foreach { header ⇒ if (header.isNot("content-type")) r ~~ header ~~ CrLf }
           part.entity match {
-            case HttpEntity.Empty              ⇒
-            case HttpEntity.NonEmpty(ct, data) ⇒ r ~~ `Content-Type` ~~ ct ~~ CrLf ~~ CrLf ~~ data ~~ CrLf
+            case HttpEntity.Empty ⇒
+            case HttpEntity.NonEmpty(ct, data) ⇒
+              if (ct == ContentTypes.NoContentType) r ~~ CrLf ~~ data ~~ CrLf else r ~~ `Content-Type` ~~ ct ~~ CrLf ~~ CrLf ~~ data ~~ CrLf
           }
         }
         r ~~ '-' ~~ '-' ~~ boundary ~~ '-' ~~ '-'

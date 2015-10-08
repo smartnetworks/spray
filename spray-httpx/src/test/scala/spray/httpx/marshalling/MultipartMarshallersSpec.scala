@@ -96,6 +96,7 @@ class MultipartMarshallersSpec extends Specification with MultipartMarshallers {
           })
       }
     }
+
   }
 
   "The MultipartFormDataMarshaller" should {
@@ -155,6 +156,38 @@ class MultipartMarshallersSpec extends Specification with MultipartMarshallers {
         }
     }
 
+    "correctly marshal 'multipart/form-data' with no content-type" in {
+      marshal(MultipartFormData(Seq(
+        BodyPart(
+          HttpEntity(ContentTypes.NoContentType, "name,age\r\n\"John Doe\",20\r\n"),
+          List(`Content-Disposition`("form-data", Map("name" -> "attachment[0]", "filename" -> "attachment.csv")))),
+        BodyPart(
+          HttpEntity("name,age\r\n\"John Doe\",20\r\n".getBytes),
+          List(
+            `Content-Disposition`("form-data", Map("name" -> "attachment[1]", "filename" -> "attachment.csv")),
+            RawHeader("Content-Transfer-Encoding", "binary")))))) ===
+        Right {
+          HttpEntity(
+            contentType = ContentType(`multipart/form-data` withBoundary randomBoundary),
+            string = result {
+              s"""|--$randomBoundary
+                  |Content-Disposition: form-data; name="attachment[0]"; filename=attachment.csv
+                  |
+                  |name,age
+                  |"John Doe",20
+                  |
+                  |--$randomBoundary
+                  |Content-Disposition: form-data; name="attachment[1]"; filename=attachment.csv
+                  |Content-Transfer-Encoding: binary
+                  |Content-Type: application/octet-stream
+                  |
+                  |name,age
+                  |"John Doe",20
+                  |
+                  |--$randomBoundary--"""
+            })
+        }
+    }
   }
 
   def result(body: String) = body.stripMarginWithNewline("\r\n")
