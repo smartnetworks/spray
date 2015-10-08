@@ -32,13 +32,15 @@ object LruCache {
    * [[spray.caching.SimpleLruCache]] instance depending on whether
    * a non-zero and finite timeToLive and/or timeToIdle is set or not.
    */
-  def apply[V](maxCapacity: Int = 500,
-               initialCapacity: Int = 16,
-               timeToLive: Duration = Duration.Inf,
-               timeToIdle: Duration = Duration.Inf): Cache[V] = {
+  def apply[V](
+    maxCapacity: Int = 500,
+    initialCapacity: Int = 16,
+    timeToLive: Duration = Duration.Inf,
+    timeToIdle: Duration = Duration.Inf): Cache[V] = {
     //#
     def check(dur: Duration, name: String) =
-      require(dur != Duration.Zero,
+      require(
+        dur != Duration.Zero,
         s"Behavior of LruCache.apply changed: Duration.Zero not allowed any more for $name parameter. To disable " +
           "expiration use Duration.Inf instead of Duration.Zero")
     // migration help
@@ -115,7 +117,8 @@ final class SimpleLruCache[V](val maxCapacity: Int, val initialCapacity: Int) ex
  */
 final class ExpiringLruCache[V](maxCapacity: Long, initialCapacity: Int,
                                 timeToLive: Duration, timeToIdle: Duration) extends Cache[V] {
-  require(!timeToLive.isFinite || !timeToIdle.isFinite || timeToLive > timeToIdle,
+  require(
+    !timeToLive.isFinite || !timeToIdle.isFinite || timeToLive > timeToIdle,
     s"timeToLive($timeToLive) must be greater than timeToIdle($timeToIdle)")
 
   private[caching] val store = new ConcurrentLinkedHashMap.Builder[Any, Entry[V]]
@@ -184,8 +187,9 @@ final class ExpiringLruCache[V](maxCapacity: Long, initialCapacity: Int,
   def size = store.size
 
   private def isAlive(entry: Entry[V]) =
-    (entry.created + timeToLive).isFuture &&
-      (entry.lastAccessed + timeToIdle).isFuture
+    !entry.future.isCompleted ||
+      ((entry.created + timeToLive).isFuture &&
+        (entry.lastAccessed + timeToIdle).isFuture)
 }
 
 private[caching] class Entry[T](val promise: Promise[T]) {
