@@ -19,7 +19,7 @@ package spray.caching
 import java.util.Random
 import java.util.concurrent.CountDownLatch
 import akka.actor.ActorSystem
-import scala.concurrent.{ Promise, Future }
+import scala.concurrent.{Promise, Future}
 import scala.concurrent.duration._
 import org.specs2.mutable.Specification
 import org.specs2.matcher.Matcher
@@ -60,6 +60,30 @@ class ExpiringLruCacheSpec extends Specification with NoTimeConversions {
         }
       }
       val future2 = cache(1)("")
+      cache.store.toString === "{1=pending}"
+      latch.countDown()
+      future1.await === "A"
+      future2.await === "A"
+      cache.store.toString === "{1=A}"
+      cache.size === 1
+    }
+    "do not generate new value when existing value is pending, even though entry has expired before future is complete" in {
+      val cache = lruCache[String](timeToLive = 10 millis span)
+      val latch = new CountDownLatch(1)
+      var returnValue = "A"
+      def expensiveCalculation: Future[String] = {
+        val promise = Promise[String]()
+        Future {
+          latch.await()
+          val res = returnValue
+          returnValue = "B"
+          promise.success(res)
+        }
+        promise.future
+      }
+      val future1 = cache(1) { expensiveCalculation }
+      Thread.sleep(50)
+      val future2 = cache(1) { expensiveCalculation }
       cache.store.toString === "{1=pending}"
       latch.countDown()
       future1.await === "A"
@@ -126,7 +150,8 @@ class ExpiringLruCacheSpec extends Specification with NoTimeConversions {
       }.await
       val beConsistent: Matcher[Seq[Int]] = (
         (ints: Seq[Int]) ⇒ ints.filter(_ != 0).reduceLeft((a, b) ⇒ if (a == b) a else 0) != 0,
-        (_: Seq[Int]) ⇒ "consistency check")
+        (_: Seq[Int]) ⇒ "consistency check"
+      )
       views.transpose must beConsistent.forall
     }
   }
