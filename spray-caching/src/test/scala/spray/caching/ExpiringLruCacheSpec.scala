@@ -19,7 +19,7 @@ package spray.caching
 import java.util.Random
 import java.util.concurrent.CountDownLatch
 import akka.actor.ActorSystem
-import scala.concurrent.{Promise, Future}
+import scala.concurrent.{ Promise, Future }
 import scala.concurrent.duration._
 import org.specs2.mutable.Specification
 import org.specs2.matcher.Matcher
@@ -150,8 +150,7 @@ class ExpiringLruCacheSpec extends Specification with NoTimeConversions {
       }.await
       val beConsistent: Matcher[Seq[Int]] = (
         (ints: Seq[Int]) ⇒ ints.filter(_ != 0).reduceLeft((a, b) ⇒ if (a == b) a else 0) != 0,
-        (_: Seq[Int]) ⇒ "consistency check"
-      )
+        (_: Seq[Int]) ⇒ "consistency check")
       views.transpose must beConsistent.forall
     }
   }
